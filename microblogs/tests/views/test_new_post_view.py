@@ -2,18 +2,16 @@ from django.test import TestCase
 from django.urls import reverse
 from microblogs.models import Post, User
 
-
 class NewPostTest(TestCase):
+
+    fixtures = [
+        'microblogs/tests/fixtures/default_user.json',
+        'microblogs/tests/fixtures/other_users.json'
+    ]
+
     def setUp(self):
         super(TestCase, self).setUp()
-        self.user = User.objects.create_user(
-            '@johndoe',
-            first_name='John',
-            last_name='Doe',
-            email='johndoe@example.org',
-            password='Password123',
-            bio='The quick brown fox jumps over the lazy dog.'
-        )
+        self.user = User.objects.get(username='@johndoe')
         self.url = reverse('new_post')
         self.data = { 'text': 'The quick brown fox jumps over the lazy dog.' }
 
@@ -26,7 +24,7 @@ class NewPostTest(TestCase):
         response = self.client.get(self.url, follow=True)
         user_count_after = Post.objects.count()
         self.assertEqual(user_count_after, user_count_before)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 405)
 
     def test_post_new_post_redirects_when_not_logged_in(self):
         user_count_before = Post.objects.count()
@@ -65,14 +63,7 @@ class NewPostTest(TestCase):
 
     def test_cannot_create_post_for_other_user(self):
         self.client.login(username='@johndoe', password='Password123')
-        other_user = User.objects.create_user(
-            '@janedoe',
-            first_name='Jane',
-            last_name='Doe',
-            email='janedoe@example.org',
-            password='Password123',
-            bio='The quick brown fox jumps over the lazy dog.'
-        )
+        other_user = User.objects.get(username='@janedoe')
         self.data['author'] = other_user.id
         user_count_before = Post.objects.count()
         response = self.client.post(self.url, self.data, follow=True)
